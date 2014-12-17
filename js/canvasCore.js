@@ -10,7 +10,7 @@
 // ToDo: удаление всех точек
 // ToDo: события на mousemove по таймеру
 // ToDo: Может двигать не за центральную точку?
-// ToDo: Кривые Безье, на стыке что будет, если вот так .____{.}____. ?
+// ToDo: Отрисовывается больше раз чем нужно (при работе с консолькой)
 
 function CanvasCore (canvasElem, gridElem) {
     var theCanvas = canvasElem;
@@ -144,6 +144,136 @@ function CanvasCore (canvasElem, gridElem) {
         }
     }())
 
+    /*
+     *  reference = [[[x0, y0], [x1, y1], ... , [xn, yn]], [[], []]];
+     *  this.getCurv returns [[x0, x0], ... , ]
+     */
+    function BezierCurve(reference, step) {
+        this.reference = reference;
+        this.step = step;
+
+        this.setStep = function(s) {
+            this.step = s;
+            return this;
+        }
+
+        this.addReference = function(c) {
+            this.reference.push(c);
+            return this;
+        }
+
+        this.getReference = function(i) {
+            return this.reference[i];
+        }
+
+        this.addDotInReference = function(i, dot) {
+            this.reference[i].push(dot);
+            return this;
+        }
+
+        this.setReference = function(c) {
+            this.reference = c;
+            return this;
+        }
+
+        this.resetReference = function() {
+            this.reference = new Array();
+            return this;
+        }
+
+        this.repairCurve = function() {
+            if (this.reference.length < 2) return;
+
+            for (var i = 1; i < this.reference.length; ++i) {
+                this.reference[i][1] = 
+                    this.repairDotJoin(this.reference[i - 1][this.reference[i - 1].length - 2], this.reference[i][0]);
+            }
+            return this;
+        }
+
+        this.repairDotJoin = function(f, c) {
+            var x = f[0] > c[0] ? (f[0] - (f[0] - c[0]) * 2) : (f[0] + (c[0] - f[0]) * 2)
+            var y = f[1] > c[1] ? (f[1] - (f[1] - c[1]) * 2) : (f[1] + (c[1] - f[1]) * 2);
+            
+            return [x, y];
+        }
+
+        this.factorial = function(x) {
+            if (x < 2) {
+                return 1;
+            }
+            var result = 1;
+            for (var i = 2; i < x + 1; ++i) {
+                result *= i;
+            }
+            return result;
+        }
+
+        this.basis = function(i, n, t) {
+            if (t < 0) t = 0;
+            if (t > 1) t = 1;
+            if (n - i < 0) i = n;
+
+            var result = this.factorial(n) / (this.factorial(i) * this.factorial(n-i))
+            result *= Math.pow(t, i) * Math.pow((1 - t), (n - i));
+
+            return result;
+        }
+
+        this.referenceFunc = function(num, t) {
+            var x = 0;
+            var y = 0;
+            for (var i = 0; i < this.reference[num].length; ++i) {
+                var basis = this.basis(i, this.reference[num].length - 1, t);
+                x += this.reference[num][i][0] * basis;
+                y += this.reference[num][i][1] * basis;
+            }
+            return [x, y];
+        }
+
+
+        this.getCurve = function() {
+            var result = new Array();
+            this.repairCurve();
+            for (var i = 0; i < this.reference.length; ++i) {
+                for (var t = 0; t < 1 + this.step ; t += this.step) {
+                    if (t > 1) {
+                        t = 1;
+                    }
+                    result.push(this.referenceFunc(i, t));
+                }
+            }
+
+            return result;
+        }
+    }
+
+    BezierManager = (function(){
+        var curve = [];
+
+        return {
+            add: function() {
+                curve.push();
+            },
+            find: function() {
+
+            },
+            remove: function() {
+
+            },
+            get: function() {
+
+            },
+            change: function() {
+
+            },
+            borgers: function() {
+                
+            }
+        }
+    }())
+
+// -------------------------------------- CONSOLE ----------------------------------------------//
     // ToDo: Если несколько холстов, надобно вводить командочки в отдельный инпут иначе конфликты
     EventFull.add(window, 'keypress', consoleManager);
     function consoleManager(e) {
@@ -230,13 +360,27 @@ function CanvasCore (canvasElem, gridElem) {
                 if (isCreateDot) createDotAct();
                 moveDotAct();
                 break;
+            case 'bezier curve':
+                break;
+            case 'bezier add segment':
+                break;
+            case 'bezier set first':
+                break;
+            case 'bezier set end':
+                break;
+            case 'bezer set reference':
+                break;
+            case 'bezier start':
+                break;
+            case 'bezier stop':
+                break;
+
         }
     }
 
     function debugAct() {
         isDebug == true ? isDebug = false : isDebug = true;
         gridAct();
-        infoAct();
         mouseMoveAct();
         mouseClickAct();
     }
@@ -252,20 +396,6 @@ function CanvasCore (canvasElem, gridElem) {
             EventFull.add(gridElem, 'change', changeGrid);
             gridSize = 2;
             gridElem.value = 2;
-        }
-    }
-
-    function infoAct() {
-        isDebugText == true ? isDebugText = false : isDebugText = true;
-
-        if (isMouseMove) {
-            EventFull.remove(theCanvas, 'mousemove', onMouseMove);
-            isMouseMove = false;
-        }
-
-        if (isMouseClick) {
-            EventFull.remove(theCanvas, 'click', onMouseClick);
-            isMouseClick = false;
         }
     }
 
@@ -360,7 +490,7 @@ function CanvasCore (canvasElem, gridElem) {
         Dots.add([e.clientX-canvasX, e.clientY-canvasY]);
         drawScreen();
     }
-    
+// -------------------------------------- CONSOLE ----------------------------------------------//    
 
     (function canvasPhoto() {
         if (document.all.canvashot) {
@@ -445,16 +575,38 @@ function CanvasCore (canvasElem, gridElem) {
         //bezierCurve.setStep(0.02);
         //drawLine(bezierCurve.getCurve(), params); 
 
+
         if (isDebugText || isMouseMove || isMouseClick) {
            writeDebugText();
         }
 
+        bezierCurve = new BezierCurve([[[20, 20], [20, 200], [200,200]], [[200,200],[400,200],[400,20]]], 0.02);
+        drawLine(bezierCurve.getCurve(), params);
+
         writeConsoleText();
+        //isDraw = false;
+        //clearTimeout(tId);
     }
 
     //ToDo: Рисовалка градиентом с возвратом fill, возврат с картинкой на фоне
+    var isDraw = false;
+    var tId = null;
+
+    var callbackId = 0;
+    function renderTime(f) {
+        return function() {
+            var t1 = new Date();
+            f.apply(this, arguments);
+            ++callbackId;
+            console.log('render ' + callbackId +' : ' + (new Date() - t1).toString() + ' мс');
+        }
+    }
+
+    drawScreen = renderTime(drawScreen);
 
     drawScreen();
+
+
 
     function writeDebugText() {
         var text = [];
@@ -504,104 +656,6 @@ function CanvasCore (canvasElem, gridElem) {
         }
         //var measures = textSize(text, textParams);
         drawText(consoleText, textParams, 20, theCanvas.height - textParams.font.size - 10);
-    }
-
-    /*
-     *  reference = [[[x0, y0], [x1, y1], ... , [xn, yn]], [[], []]];
-     *  this.getCurv returns [[x0, x0], ... , ]
-     */
-    function BezierCurve(reference, step) {
-        this.reference = reference;
-        this.step = step;
-
-        this.setStep = function(s) {
-            this.step = s;
-        }
-
-        this.addReference = function(c) {
-            this.reference.push(c);
-        }
-
-        this.getReference = function(i) {
-            return this.reference[i];
-        }
-
-        this.addDotInReference = function(i, dot) {
-            this.reference[i].push(dot);
-        }
-
-        this.setReference = function(c) {
-            this.reference = c;
-        }
-
-        this.resetReference = function() {
-            this.reference = new Array();
-        }
-
-        this.repairCurve = function() {
-            if (this.reference.length < 2) return;
-
-            for (var i = 1; i < this.reference.length; ++i) {
-                this.reference[i][1] = 
-                    this.repairDotJoin(this.reference[i - 1][this.reference[i - 1].length - 2], this.reference[i][0]);
-            }
-        }
-
-        this.repairDotJoin = function(f, c) {
-            var x = f[0] > c[0] ? (f[0] - (f[0] - c[0]) * 2) : (f[0] + (c[0] - f[0]) * 2)
-            var y = f[1] > c[1] ? (f[1] - (f[1] - c[1]) * 2) : (f[1] + (c[1] - f[1]) * 2);
-            
-            return [x, y];
-        }
-
-        this.factorial = function(x) {
-            if (x < 2) {
-                return 1;
-            }
-            var result = 1;
-            for (var i = 2; i < x + 1; ++i) {
-                result *= i;
-            }
-            return result;
-        }
-
-        this.basis = function(i, n, t) {
-            if (t < 0) t = 0;
-            if (t > 1) t = 1;
-            if (n - i < 0) i = n;
-
-            var result = this.factorial(n) / (this.factorial(i) * this.factorial(n-i))
-            result *= Math.pow(t, i) * Math.pow((1 - t), (n - i));
-
-            return result;
-        }
-
-        this.referenceFunc = function(num, t) {
-            var x = 0;
-            var y = 0;
-            for (var i = 0; i < this.reference[num].length; ++i) {
-                var basis = this.basis(i, this.reference[num].length - 1, t);
-                x += this.reference[num][i][0] * basis;
-                y += this.reference[num][i][1] * basis;
-            }
-            return [x, y];
-        }
-
-
-        this.getCurve = function() {
-            var result = new Array();
-            this.repairCurve();
-            for (var i = 0; i < this.reference.length; ++i) {
-                for (var t = 0; t < 1 + this.step ; t += this.step) {
-                    if (t > 1) {
-                        t = 1;
-                    }
-                    result.push(this.referenceFunc(i, t));
-                }
-            }
-
-            return result;
-        }
     }
 
     function appLoop(time) {
