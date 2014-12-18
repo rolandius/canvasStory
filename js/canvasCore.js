@@ -1,7 +1,4 @@
 // ToDo: сделать объект конфетку
-// ToDo: время отрисовки холста
-// ToDo: смена цвета
-// ToDo: гет список точек
 // ToDo: Придумать что-то с рамкой?? Она влияет на позицию точки...
 // ToDo: Возможность выбора цвета и размера точки
 // ToDo: если действия в консоли налагаются, что делать??
@@ -11,6 +8,9 @@
 // ToDo: события на mousemove по таймеру
 // ToDo: Может двигать не за центральную точку?
 // ToDo: Отрисовывается больше раз чем нужно (при работе с консолькой)
+// ToDo:  И вообще ее логику изменить...
+// ToDo: Если два раза нажать :
+// ToDo: позиция элемента над всеми??
 
 function CanvasCore (canvasElem, gridElem) {
     var theCanvas = canvasElem;
@@ -49,6 +49,7 @@ function CanvasCore (canvasElem, gridElem) {
         var id = 0;
         var size = 30;
         var color = 'red';
+        var visible = true;
         var dotOnMouse = null;
 
         function drawDot(id) {
@@ -81,6 +82,7 @@ function CanvasCore (canvasElem, gridElem) {
                 dots[id] = dot;
                 dots[id].color = color;
                 dots[id].size = size;
+                dots[id].visible = visible;
                 ++id;
                 return this;
             },
@@ -99,18 +101,25 @@ function CanvasCore (canvasElem, gridElem) {
             setDot: function(id, dot) {
                 var color = dots[id].color;
                 var size = dots[id].size;
+                var visible = dots[id].visible;
 
                 dots[id] = dot;
                 dots[id].color = color;
                 dots[id].size = size;
+                dots[id].visible = visible;
             },
             getDot: function(id) {
                 return dots[id];
             },
+            getDotId: function(dot) {
+                return findDot(dot);
+            },
             draw: function(){
                 if (dots.length == 0) return;
                 for (var i in dots){
-                    drawDot(i);
+                    if (dots[i].visible) {
+                        drawDot(i);
+                    }
                 }
                 return this;
             },
@@ -118,15 +127,43 @@ function CanvasCore (canvasElem, gridElem) {
                 color = c;
                 return this;
             },
-            getColor: function(c) {
+            setColorOfDot: function(id, color) {
+                dots[id].color = color;
+                return this;
+            },
+            getColor: function() {
                 return color;
+            },
+            getColorOfDot: function(id) {
+                return dots[id].color;
             },
             setSize: function(s) {
                 size = s;
                 return this;
             },
+            setSizeOfDot: function(id, size) {
+                dots[id].size = size;
+                return this;
+            },
             getSize: function() {
                 return size;
+            },
+            getSizeOfDot: function(id) {
+                return dots[id].size;
+            },
+            getVisible: function() {
+                return visible;
+            },
+            getVisibleOfDot: function(id) {
+                return dots[id].visible;
+            },
+            setVisible: function(v) {
+                visible = v;
+                return this;
+            },
+            setVisibleOfDot: function(id, visible){
+                dots[id].visible = visible;
+                return this;
             },
             getDotOnMouse: function() {
                 return dotOnMouse;
@@ -325,7 +362,14 @@ function CanvasCore (canvasElem, gridElem) {
 
     function consoleAction() {
         var command = consoleText[0].split(':')[1].replace(/^\s+/, '').replace(/\s+$/, '');
+        var p = command.split('\"');
+        command = p[0].replace(/^\s+/, '').replace(/\s+$/, '');
 
+        var params = [];
+        for (var i = 1; i < p.length; i+=2) {
+            params.push(p[i]);
+        }
+        console.log(params[0])
         switch (command) {
             case 'help':
                 showHelp();
@@ -345,20 +389,28 @@ function CanvasCore (canvasElem, gridElem) {
             case 'DEBUG':
                 debugAct();
                 break;
-            case 'create dot':
+            case 'dot create':
                 if (isDeleteDot) deleteDotAct();
                 if (isMoveDot) moveDotAct();
                 createDotAct();
                 break;
-            case 'delete dot':
+            case 'dot delete':
                 if (isCreateDot) createDotAct();
                 if (isMoveDot) moveDotAct();
                 deleteDotAct();
                 break;
-            case 'move dot':
+            case 'dot move':
                 if (isDeleteDot) deleteDotAct();
                 if (isCreateDot) createDotAct();
                 moveDotAct();
+                break;
+            case 'dot color':
+                Dots.setColor(params[0]);
+                break;
+            case 'dot size':
+                Dots.setSize(params[0]);
+                break;
+            case 'dot visible':
                 break;
             case 'bezier curve':
                 break;
